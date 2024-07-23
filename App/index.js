@@ -1,104 +1,176 @@
 // Filename: index.js
 // Combined code from all files
 
-import React, { useState } from 'react';
-import { SafeAreaView, StatusBar, StyleSheet, ScrollView, Text, View, TextInput, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { SafeAreaView, StyleSheet, Text, View, Dimensions } from 'react-native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 
-const WorkoutTracker = () => {
-  const [workout, setWorkout] = useState('');
-  const [workoutList, setWorkoutList] = useState([]);
+const { width, height } = Dimensions.get('screen');
 
-  const handleAddWorkout = () => {
-    if (workout.trim()) {
-      setWorkoutList(prev => [...prev, { id: String(prev.length + 1), name: workout }]);
-      setWorkout('');
-    }
+const COLS = 20;
+const CELL_SIZE = width / COLS;
+const ROWS = Math.floor(height / CELL_SIZE);
+
+const directions = {
+  RIGHT: { x: 1, y: 0 },
+  LEFT: { x: -1, y: 0 },
+  UP: { x: 0, y: -1 },
+  DOWN: { x: 0, y: 1 },
+};
+
+const getRandomPosition = () => {
+  const x = Math.floor(Math.random() * COLS);
+  const y = Math.floor(Math.random() * ROWS);
+  return { x, y };
+};
+
+const SnakeGame = () => {
+  const [snake, setSnake] = useState([{ x: 2, y: 2 }]);
+  const [direction, setDirection] = useState(directions.RIGHT);
+  const [food, setFood] = useState(getRandomPosition());
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  const gameLoop = useRef(null);
+
+  const moveSnake = () => {
+    setSnake((prevSnake) => {
+      const newHead = {
+        x: prevSnake[0].x + direction.x,
+        y: prevSnake[0].y + direction.y,
+      };
+
+      if (
+        newHead.x >= COLS ||
+        newHead.x < 0 ||
+        newHead.y >= ROWS ||
+        newHead.y < 0 ||
+        prevSnake.some((cell) => cell.x === newHead.x && cell.y === newHead.y)
+      ) {
+        setIsPlaying(false);
+        if (gameLoop.current) clearInterval(gameLoop.current);
+        return prevSnake;
+      }
+
+      const newSnake = [newHead, ...prevSnake];
+
+      if (newHead.x === food.x && newHead.y === food.y) {
+        setFood(getRandomPosition());
+      } else {
+        newSnake.pop();
+      }
+
+      return newSnake;
+    });
   };
 
-  const renderWorkoutItem = ({ item }) => (
-    <View style={styles.workoutItem}>
-      <Text style={styles.workoutText}>{item.name}</Text>
-    </View>
-  );
+  useEffect(() => {
+    if (isPlaying) {
+      gameLoop.current = setInterval(moveSnake, 200);
+    }
+
+    return () => {
+      if (gameLoop.current) clearInterval(gameLoop.current);
+    };
+  }, [isPlaying, direction]);
+
+  const handleDirectionChange = (newDirection) => {
+    setDirection(newDirection);
+  };
 
   return (
     <View style={styles.container}>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter workout"
-        value={workout}
-        onChangeText={setWorkout}
+      {snake.map((segment, index) => (
+        <View
+          key={index}
+          style={[
+            styles.snakeSegment,
+            {
+              left: segment.x * CELL_SIZE,
+              top: segment.y * CELL_SIZE,
+            },
+          ]}
+        />
+      ))}
+      <View
+        style={[
+          styles.food,
+          {
+            left: food.x * CELL_SIZE,
+            top: food.y * CELL_SIZE,
+          },
+        ]}
       />
-      <TouchableOpacity style={styles.button} onPress={handleAddWorkout}>
-        <Text style={styles.buttonText}>Add Workout</Text>
-      </TouchableOpacity>
-      <FlatList
-        data={workoutList}
-        renderItem={renderWorkoutItem}
-        keyExtractor={item => item.id}
-        style={styles.workoutList}
-      />
+      <View style={styles.controls}>
+        <TouchableOpacity onPress={() => handleDirectionChange(directions.UP)} style={styles.controlButton}>
+          <Text>Up</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleDirectionChange(directions.LEFT)} style={styles.controlButton}>
+          <Text>Left</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleDirectionChange(directions.DOWN)} style={styles.controlButton}>
+          <Text>Down</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleDirectionChange(directions.RIGHT)} style={styles.controlButton}>
+          <Text>Right</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    position: 'relative',
+  },
+  snakeSegment: {
+    position: 'absolute',
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+    backgroundColor: 'green',
+  },
+  food: {
+    position: 'absolute',
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+    backgroundColor: 'red',
+  },
+  controls: {
+    position: 'absolute',
+    bottom: 40,
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  controlButton: {
+    padding: 20,
+    margin: 10,
+    backgroundColor: '#ccc',
+    borderRadius: 5,
+  },
+});
+
 export default function App() {
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <Text style={styles.title}>Workout Tracker</Text>
-        <WorkoutTracker />
-      </ScrollView>
+    <SafeAreaView style={appStyles.container}>
+      <Text style={appStyles.title}>Snake Game</Text>
+      <SnakeGame />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const appStyles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-  },
-  scrollViewContent: {
-    padding: 20,
-    alignItems: 'center',
+    marginTop: 40,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginVertical: 20,
-  },
-  input: {
-    width: '80%',
-    padding: 10,
+    textAlign: 'center',
     marginVertical: 10,
-    borderWidth: 1,
-    borderRadius: 5,
-    borderColor: '#cccccc',
-  },
-  button: {
-    backgroundColor: '#4caf50',
-    padding: 10,
-    borderRadius: 5,
-    marginVertical: 10,
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  workoutList: {
-    width: '100%',
-    marginTop: 20,
-  },
-  workoutItem: {
-    padding: 15,
-    marginVertical: 5,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 5,
-    borderColor: '#dddddd',
-    borderWidth: 1,
-  },
-  workoutText: {
-    fontSize: 16,
   },
 });
