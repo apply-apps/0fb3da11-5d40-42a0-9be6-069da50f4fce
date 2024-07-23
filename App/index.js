@@ -2,76 +2,54 @@
 // Combined code from all files
 
 import React, { useState } from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  Button,
-  ActivityIndicator,
-  ScrollView
-} from 'react-native';
-import axios from 'axios';
+import { SafeAreaView, StatusBar, StyleSheet, ScrollView, Text, View, TextInput, TouchableOpacity, FlatList } from 'react-native';
 
-const API_URL = 'http://apihub.p.appply.xyz:3300/chatgpt';
+const WorkoutTracker = () => {
+  const [workout, setWorkout] = useState('');
+  const [workoutList, setWorkoutList] = useState([]);
 
-const FairyTaleGenerator = () => {
-  const [heroes, setHeroes] = useState('');
-  const [villains, setVillains] = useState('');
-  const [plot, setPlot] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [fairyTale, setFairyTale] = useState('');
-
-  const generateFairyTale = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.post(API_URL, {
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a helpful assistant. Please create a fairy tale based on the given heroes, villains, and plot.'
-          },
-          { role: 'user', content: `Heroes: ${heroes}, Villains: ${villains}, Plot: ${plot}` }
-        ],
-        model: 'gpt-4o'
-      });
-      const { data } = response;
-      setFairyTale(data.response);
-    } catch (error) {
-      console.error(error);
+  const handleAddWorkout = () => {
+    if (workout.trim()) {
+      setWorkoutList(prev => [...prev, { id: String(prev.length + 1), name: workout }]);
+      setWorkout('');
     }
-    setLoading(false);
   };
 
-  return (
-    <ScrollView contentContainerStyle={styles.generatorContainer}>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter heroes (comma separated)"
-        value={heroes}
-        onChangeText={setHeroes}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Enter villains (comma separated)"
-        value={villains}
-        onChangeText={setVillains}
-      />
-      <TextInput style={styles.input} placeholder="Enter plot" value={plot} onChangeText={setPlot} />
-      <Button title="Generate Fairy Tale" onPress={generateFairyTale} disabled={loading} />
+  const renderWorkoutItem = ({ item }) => (
+    <View style={styles.workoutItem}>
+      <Text style={styles.workoutText}>{item.name}</Text>
+    </View>
+  );
 
-      {loading ? <ActivityIndicator size="large" color="#0000ff" style={styles.loading} /> : <Text style={styles.fairyTale}>{fairyTale}</Text>}
-    </ScrollView>
+  return (
+    <View style={styles.container}>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter workout"
+        value={workout}
+        onChangeText={setWorkout}
+      />
+      <TouchableOpacity style={styles.button} onPress={handleAddWorkout}>
+        <Text style={styles.buttonText}>Add Workout</Text>
+      </TouchableOpacity>
+      <FlatList
+        data={workoutList}
+        renderItem={renderWorkoutItem}
+        keyExtractor={item => item.id}
+        style={styles.workoutList}
+      />
+    </View>
   );
 };
 
 export default function App() {
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Fairy Tale Generator</Text>
-      <FairyTaleGenerator />
+      <StatusBar barStyle="dark-content" />
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <Text style={styles.title}>Workout Tracker</Text>
+        <WorkoutTracker />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -79,32 +57,48 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: 40,
-    paddingHorizontal: 20
+    alignItems: 'center',
+  },
+  scrollViewContent: {
+    padding: 20,
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 10
-  },
-  generatorContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 30
+    marginVertical: 20,
   },
   input: {
+    width: '80%',
+    padding: 10,
+    marginVertical: 10,
     borderWidth: 1,
+    borderRadius: 5,
     borderColor: '#cccccc',
+  },
+  button: {
+    backgroundColor: '#4caf50',
     padding: 10,
     borderRadius: 5,
-    marginBottom: 15
+    marginVertical: 10,
   },
-  loading: { marginTop: 20 },
-  fairyTale: {
+  buttonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  workoutList: {
+    width: '100%',
     marginTop: 20,
+  },
+  workoutItem: {
+    padding: 15,
+    marginVertical: 5,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 5,
+    borderColor: '#dddddd',
+    borderWidth: 1,
+  },
+  workoutText: {
     fontSize: 16,
-    textAlign: 'center'
-  }
+  },
 });
